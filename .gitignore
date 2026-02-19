@@ -1,0 +1,12 @@
+# Claude Code internals
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Temp chart files
+_report_charts/

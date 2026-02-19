@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fraud Detection Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0F1117;
+    --surface: #1A1D27;
+    --surface2: #252833;
+    --border: #2D3140;
+    --text: #E2E8F0;
+    --text-dim: #94A3B8;
+    --accent: #6366F1;
+    --red: #EF4444;
+    --amber: #F59E0B;
+    --yellow: #EAB308;
+    --green: #22C55E;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    padding: 2rem;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.3rem;
+  }
+  .header h1 span { color: var(--red); }
+  .header p { color: var(--text-dim); font-size: 0.95rem; }
+
+  /* KPI cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+  }
+  .kpi .value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .kpi .value.red { color: var(--red); }
+  .kpi .value.amber { color: var(--amber); }
+  .kpi .label {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.2rem;
+  }
+
+  /* Charts */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  @media (max-width: 900px) {
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+  .chart-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-dim);
+  }
+
+  /* Thresholds section */
+  .thresholds {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .thresholds h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-dim);
+  }
+  .thresh-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+  .thresh-item {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+  }
+  .thresh-item .tl { font-size: 0.8rem; color: var(--text-dim); }
+  .thresh-item .tv { font-size: 1.1rem; font-weight: 600; }
+
+  /* Table */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+  .table-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-dim);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  th {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 2px solid var(--border);
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  td {
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tr:hover td { background: var(--surface2); }
+  .flags-cell {
+    white-space: normal;
+    max-width: 350px;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.82rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1><span>Fraud</span> / Anomaly Detection Report</h1>
+    <p>Auto Insurance Claims Analysis &mdash; 3,539 claims evaluated from 10,000 records</p>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="value">10,000</div>
+      <div class="label">Total Records</div>
+    </div>
+    <div class="kpi">
+      <div class="value">3,539</div>
+      <div class="label">Claims Analysed</div>
+    </div>
+    <div class="kpi">
+      <div class="value red">95</div>
+      <div class="label">Customers Flagged</div>
+    </div>
+    <div class="kpi">
+      <div class="value amber">2.7%</div>
+      <div class="label">Flag Rate</div>
+    </div>
+    <div class="kpi">
+      <div class="value">8</div>
+      <div class="label">Highest Risk Score</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Flags by Detection Rule</h3>
+      <canvas id="ruleChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Risk Score Distribution</h3>
+      <canvas id="scoreChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Computed Thresholds -->
+  <div class="thresholds">
+    <h3>Computed Thresholds (derived from data)</h3>
+    <div class="thresh-grid">
+      <div class="thresh-item">
+        <div class="tl">Loss Ratio Extreme (&gt;15x)</div>
+        <div class="tv">15.0x</div>
+      </div>
+      <div class="thresh-item">
+        <div class="tl">Top 5% Loss Cutoff</div>
+        <div class="tv">$9,260.57</div>
+      </div>
+      <div class="thresh-item">
+        <div class="tl">Bottom 25% Premium Cutoff</div>
+        <div class="tv">$1,313.76</div>
+      </div>
+      
+      </div>
+      <h3 style="margin-top:1rem; font-size:0.9rem; color:var(--text-dim);">
+        Statistical Outlier Thresholds by Age Group (mean + 3&sigma;)
+      </h3>
+      <div class="thresh-grid">
+      <div class="thresh-item"><div class="tl">Age <25</div><div class="tv">$13,530.46</div></div><div class="thresh-item"><div class="tl">Age 25-34</div><div class="tv">$12,004.76</div></div><div class="thresh-item"><div class="tl">Age 35-44</div><div class="tv">$13,789.58</div></div><div class="thresh-item"><div class="tl">Age 45-54</div><div class="tv">$16,231.26</div></div><div class="thresh-item"><div class="tl">Age 55-64</div><div class="tv">$12,741.97</div></div><div class="thresh-item"><div class="tl">Age 65+</div><div class="tv">$16,261.22</div></div>
+      
+    </div>
+  </div>
+
+  <!-- Top 30 Flagged Claims Table -->
+  <div class="table-card">
+    <h3>Top 30 Flagged Claims (sorted by risk score)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Customer ID</th>
+          <th>Gender</th>
+          <th>Age</th>
+          <th>Car Year</th>
+          <th>Premium</th>
+          <th>Total Loss</th>
+          <th>Loss Ratio</th>
+          <th>Risk Score</th>
+          <th>Triggered Rules</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td>9205</td>
+          <td>Female</td>
+          <td>54</td>
+          <td>2025</td>
+          <td>$995.73</td>
+          <td>$21,146.87</td>
+          <td>21.24</td>
+          <td style="color:#EF4444; font-weight:700;">8</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group), New Car (&gt;=2022), High Loss (&gt;$10k), Premium-Loss Mismatch (top 5% loss, bottom 25% premium)</td>
+        </tr>
+        <tr>
+          <td>6192</td>
+          <td>Female</td>
+          <td>36</td>
+          <td>2023</td>
+          <td>$1,344.98</td>
+          <td>$33,385.95</td>
+          <td>24.82</td>
+          <td style="color:#EF4444; font-weight:700;">7</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group), New Car (&gt;=2022), High Loss (&gt;$10k)</td>
+        </tr>
+        <tr>
+          <td>651</td>
+          <td>Male</td>
+          <td>24</td>
+          <td>2022</td>
+          <td>$1,837.25</td>
+          <td>$22,343.82</td>
+          <td>12.16</td>
+          <td style="color:#F59E0B; font-weight:700;">6</td>
+          <td class="flags-cell">Statistical Outlier (&gt;mean+3*std by age group), New Car (&gt;=2022), High Loss (&gt;$10k), Young Driver (&lt;25), Extreme Claim (&gt;$15k)</td>
+        </tr>
+        <tr>
+          <td>4499</td>
+          <td>Male</td>
+          <td>24</td>
+          <td>2022</td>
+          <td>$2,096.45</td>
+          <td>$22,424.33</td>
+          <td>10.70</td>
+          <td style="color:#F59E0B; font-weight:700;">6</td>
+          <td class="flags-cell">Statistical Outlier (&gt;mean+3*std by age group), New Car (&gt;=2022), High Loss (&gt;$10k), Young Driver (&lt;25), Extreme Claim (&gt;$15k)</td>
+        </tr>
+        <tr>
+          <td>6500</td>
+          <td>Female</td>
+          <td>42</td>
+          <td>2011</td>
+          <td>$1,106.89</td>
+          <td>$28,929.33</td>
+          <td>26.14</td>
+          <td style="color:#F59E0B; font-weight:700;">6</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group), Premium-Loss Mismatch (top 5% loss, bottom 25% premium)</td>
+        </tr>
+        <tr>
+          <td>3468</td>
+          <td>Female</td>
+          <td>60</td>
+          <td>2014</td>
+          <td>$1,243.18</td>
+          <td>$28,596.97</td>
+          <td>23.00</td>
+          <td style="color:#F59E0B; font-weight:700;">6</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group), Premium-Loss Mismatch (top 5% loss, bottom 25% premium)</td>
+        </tr>
+        <tr>
+          <td>7455</td>
+          <td>Female</td>
+          <td>48</td>
+          <td>2020</td>
+          <td>$1,304.89</td>
+          <td>$23,385.23</td>
+          <td>17.92</td>
+          <td style="color:#F59E0B; font-weight:700;">6</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group), Premium-Loss Mismatch (top 5% loss, bottom 25% premium)</td>
+        </tr>
+        <tr>
+          <td>4579</td>
+          <td>Female</td>
+          <td>46</td>
+          <td>2014</td>
+          <td>$1,080.44</td>
+          <td>$31,935.56</td>
+          <td>29.56</td>
+          <td style="color:#F59E0B; font-weight:700;">6</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group), Premium-Loss Mismatch (top 5% loss, bottom 25% premium)</td>
+        </tr>
+        <tr>
+          <td>6654</td>
+          <td>Male</td>
+          <td>50</td>
+          <td>2024</td>
+          <td>$725.86</td>
+          <td>$13,974.66</td>
+          <td>19.25</td>
+          <td style="color:#F59E0B; font-weight:700;">6</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), New Car (&gt;=2022), High Loss (&gt;$10k), Premium-Loss Mismatch (top 5% loss, bottom 25% premium)</td>
+        </tr>
+        <tr>
+          <td>7841</td>
+          <td>Female</td>
+          <td>23</td>
+          <td>2024</td>
+          <td>$1,910.47</td>
+          <td>$16,221.66</td>
+          <td>8.49</td>
+          <td style="color:#F59E0B; font-weight:700;">6</td>
+          <td class="flags-cell">Statistical Outlier (&gt;mean+3*std by age group), New Car (&gt;=2022), High Loss (&gt;$10k), Young Driver (&lt;25), Extreme Claim (&gt;$15k)</td>
+        </tr>
+        <tr>
+          <td>9288</td>
+          <td>Female</td>
+          <td>31</td>
+          <td>2020</td>
+          <td>$997.70</td>
+          <td>$16,200.09</td>
+          <td>16.24</td>
+          <td style="color:#F59E0B; font-weight:700;">6</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group), Premium-Loss Mismatch (top 5% loss, bottom 25% premium)</td>
+        </tr>
+        <tr>
+          <td>9068</td>
+          <td>Male</td>
+          <td>52</td>
+          <td>2020</td>
+          <td>$1,285.75</td>
+          <td>$76,525.49</td>
+          <td>59.52</td>
+          <td style="color:#F59E0B; font-weight:700;">6</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group), Premium-Loss Mismatch (top 5% loss, bottom 25% premium)</td>
+        </tr>
+        <tr>
+          <td>1966</td>
+          <td>Female</td>
+          <td>39</td>
+          <td>2022</td>
+          <td>$1,201.48</td>
+          <td>$14,170.80</td>
+          <td>11.79</td>
+          <td style="color:#F59E0B; font-weight:700;">5</td>
+          <td class="flags-cell">Statistical Outlier (&gt;mean+3*std by age group), New Car (&gt;=2022), High Loss (&gt;$10k), Premium-Loss Mismatch (top 5% loss, bottom 25% premium)</td>
+        </tr>
+        <tr>
+          <td>1269</td>
+          <td>Female</td>
+          <td>43</td>
+          <td>2008</td>
+          <td>$1,323.41</td>
+          <td>$30,835.19</td>
+          <td>23.30</td>
+          <td style="color:#F59E0B; font-weight:700;">5</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group)</td>
+        </tr>
+        <tr>
+          <td>1263</td>
+          <td>Male</td>
+          <td>48</td>
+          <td>2014</td>
+          <td>$1,415.69</td>
+          <td>$22,090.49</td>
+          <td>15.60</td>
+          <td style="color:#F59E0B; font-weight:700;">5</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group)</td>
+        </tr>
+        <tr>
+          <td>3698</td>
+          <td>Female</td>
+          <td>70</td>
+          <td>2021</td>
+          <td>$1,724.86</td>
+          <td>$29,768.94</td>
+          <td>17.26</td>
+          <td style="color:#F59E0B; font-weight:700;">5</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group)</td>
+        </tr>
+        <tr>
+          <td>4849</td>
+          <td>Female</td>
+          <td>41</td>
+          <td>2007</td>
+          <td>$1,467.26</td>
+          <td>$32,705.54</td>
+          <td>22.29</td>
+          <td style="color:#F59E0B; font-weight:700;">5</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group)</td>
+        </tr>
+        <tr>
+          <td>5409</td>
+          <td>Male</td>
+          <td>57</td>
+          <td>2005</td>
+          <td>$1,836.78</td>
+          <td>$32,260.47</td>
+          <td>17.56</td>
+          <td style="color:#F59E0B; font-weight:700;">5</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group)</td>
+        </tr>
+        <tr>
+          <td>5319</td>
+          <td>Male</td>
+          <td>38</td>
+          <td>2007</td>
+          <td>$1,355.30</td>
+          <td>$22,711.62</td>
+          <td>16.76</td>
+          <td style="color:#F59E0B; font-weight:700;">5</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group)</td>
+        </tr>
+        <tr>
+          <td>8976</td>
+          <td>Female</td>
+          <td>36</td>
+          <td>2014</td>
+          <td>$1,334.88</td>
+          <td>$25,975.15</td>
+          <td>19.46</td>
+          <td style="color:#F59E0B; font-weight:700;">5</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group)</td>
+        </tr>
+        <tr>
+          <td>9129</td>
+          <td>Female</td>
+          <td>36</td>
+          <td>2024</td>
+          <td>$1,198.43</td>
+          <td>$14,337.31</td>
+          <td>11.96</td>
+          <td style="color:#F59E0B; font-weight:700;">5</td>
+          <td class="flags-cell">Statistical Outlier (&gt;mean+3*std by age group), New Car (&gt;=2022), High Loss (&gt;$10k), Premium-Loss Mismatch (top 5% loss, bottom 25% premium)</td>
+        </tr>
+        <tr>
+          <td>3213</td>
+          <td>Male</td>
+          <td>40</td>
+          <td>2005</td>
+          <td>$1,491.57</td>
+          <td>$43,627.11</td>
+          <td>29.25</td>
+          <td style="color:#F59E0B; font-weight:700;">5</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group)</td>
+        </tr>
+        <tr>
+          <td>1225</td>
+          <td>Male</td>
+          <td>47</td>
+          <td>2019</td>
+          <td>$1,368.16</td>
+          <td>$21,185.02</td>
+          <td>15.48</td>
+          <td style="color:#F59E0B; font-weight:700;">5</td>
+          <td class="flags-cell">Extreme Loss Ratio (&gt;15x), Statistical Outlier (&gt;mean+3*std by age group)</td>
+        </tr>
+        <tr>
+          <td>4450</td>
+          <td>Female</td>
+          <td>23</td>
+          <td>2015</td>
+          <td>$2,091.35</td>
+          <td>$20,067.88</td>
+          <td>9.60</td>
+          <td style="color:#EAB308; font-weight:700;">4</td>
+          <td class="flags-cell">Statistical Outlier (&gt;mean+3*std by age group), Young Driver (&lt;25), Extreme Claim (&gt;$15k)</td>
+        </tr>
+        <tr>
+          <td>2228</td>
+          <td>Female</td>
+          <td>18</td>
+          <td>2002</td>
+          <td>$2,033.00</td>
+          <td>$17,112.34</td>
+          <td>8.42</td>
+          <td style="color:#EAB308; font-weight:700;">4</td>
+          <td class="flags-cell">Statistical Outlier (&gt;mean+3*std by age group), Young Driver (&lt;25), Extreme Claim (&gt;$15k)</td>
+        </tr>
+        <tr>
+          <td>1338</td>
+          <td>Female</td>
+          <td>19</td>
+          <td>2019</td>
+          <td>$1,893.04</td>
+          <td>$21,485.12</td>
+          <td>11.35</td>
+          <td style="color:#EAB308; font-weight:700;">4</td>
+          <td class="flags-cell">Statistical Outlier (&gt;mean+3*std by age group), Young Driver (&lt;25), Extreme Claim (&gt;$15k)</td>
+        </tr>
+        <tr>
+          <td>3081</td>
+          <td>Female</td>
+          <td>18</td>
+          <td>2024</td>
+          <td>$1,667.52</td>
+          <td>$14,473.15</td>
+          <td>8.68</td>
+          <td style="color:#EAB308; font-weight:700;">4</td>
+          <td class="flags-cell">Statistical Outlier (&gt;mean+3*std by age group), New Car (&gt;=2022), High Loss (&gt;$10k)</td>
+        </tr>
+        <tr>
+          <td>2075</td>
+          <td>Female</td>
+          <td>58</td>
+          <td>2023</td>
+          <td>$1,326.14</td>
+          <td>$19,071.84</td>
+          <td>14.38</td>
+          <td style="color:#EAB308; font-weight:700;">4</td>
+          <td class="flags-cell">Statistical Outlier (&gt;mean+3*std by age group), New Car (&gt;=2022), High Loss (&gt;$10k)</td>
+        </tr>
+        <tr>
+          <td>7774</td>
+          <td>Male</td>
+          <td>18</td>
+          <td>2016</td>
+          <td>$2,234.24</td>
+          <td>$25,006.16</td>
+          <td>11.19</td>
+          <td style="color:#EAB308; font-weight:700;">4</td>
+          <td class="flags-cell">Statistical Outlier (&gt;mean+3*std by age group), Young Driver (&lt;25), Extreme Claim (&gt;$15k)</td>
+        </tr>
+        <tr>
+          <td>9926</td>
+          <td>Male</td>
+          <td>48</td>
+          <td>2022</td>
+          <td>$1,585.73</td>
+          <td>$20,728.30</td>
+          <td>13.07</td>
+          <td style="color:#EAB308; font-weight:700;">4</td>
+          <td class="flags-cell">Statistical Outlier (&gt;mean+3*std by age group), New Car (&gt;=2022), High Loss (&gt;$10k)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    Generated by fraud_detection.py &mdash; Score-based anomaly detection system
+  </div>
+
+</div>
+
+<script>
+  Chart.defaults.color = '#94A3B8';
+  Chart.defaults.borderColor = '#2D3140';
+
+  // Rule chart
+  new Chart(document.getElementById('ruleChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Extreme Loss Ratio (>15x)', 'Statistical Outlier (>mean+3*std by age group)', 'New Car (>=2022), High Loss (>$10k)', 'Young Driver (<25), Extreme Claim (>$15k)', 'Premium-Loss Mismatch (top 5% loss, bottom 25% premium)'],
+      datasets: [{
+        data: [18, 59, 28, 8, 39],
+        backgroundColor: ['#EF4444','#F59E0B','#6366F1','#22C55E','#8B5CF6'],
+        borderRadius: 6,
+        maxBarThickness: 48,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.raw + ' claims'
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#2D314044' } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+
+  // Score distribution chart
+  new Chart(document.getElementById('scoreChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Score 1', 'Score 2', 'Score 3', 'Score 4', 'Score 5', 'Score 6', 'Score 7', 'Score 8'],
+      datasets: [{
+        data: [19, 34, 10, 9, 11, 10, 1, 1],
+        backgroundColor: ['Score 1', 'Score 2', 'Score 3', 'Score 4', 'Score 5', 'Score 6', 'Score 7', 'Score 8'].map((_, i) => {
+          const scores = [1, 2, 3, 4, 5, 6, 7, 8];
+          const s = scores[i];
+          if (s >= 7) return '#EF4444';
+          if (s >= 5) return '#F59E0B';
+          return '#EAB308';
+        }),
+        borderRadius: 6,
+        maxBarThickness: 48,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.raw + ' customers'
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#2D314044' }, beginAtZero: true }
+      }
+    }
+  });
+</script>
+</body>
+</html>
